@@ -1,26 +1,45 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import {HttpException, HttpStatus, Injectable, UnauthorizedException} from '@nestjs/common';
+import {CreateUserDto} from "../users/dto/create-user.dto";
+import {UsersService} from "../users/users.service";
+import * as bcrypt from 'bcryptjs'
+import {User} from "../users/user.model";
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+      private usersService: UsersService,
+      private jwtService: JwtService
+  ) {}
+  async login(createUserDto: CreateUserDto) {
+    const user =await this.validateUser(createUserDto);
+    return this.generateToken(user)
+
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async registration(createUserDto: CreateUserDto) {
+    const candidate = await this.usersService.findByEmail(createUserDto.email)
+    if (candidate){
+      throw new HttpException("User already exists", HttpStatus.BAD_REQUEST);
+    }
+    const password =await bcrypt.hash(createUserDto.password, 5);
+    const user =await this.usersService.create({...createUserDto, password:password})
+    return this.generateToken(user)
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+
+  private generateToken(user:User) {
+    console.log(user)
+    const payload = { email: user.email, sub: user.id, roles:user.roles };
+    return {access_token: this.jwtService.sign(payload)}
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async validateUser(user){
+    const candidate = await this.usersService.findByEmail(user.email)
+    const pass= await bcrypt.compare( user.password,candidate.password)
+    if (pass && candidate) {
+      return candidate
+    }
+      throw new UnauthorizedException({message: "Некорректный емайл или пароль"});
   }
 }

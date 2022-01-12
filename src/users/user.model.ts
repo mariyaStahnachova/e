@@ -1,4 +1,7 @@
-import {BelongsToMany, Column, DataType, Model, Table} from 'sequelize-typescript';
+import {BelongsToMany, Column, DataType, HasMany, Model, Table} from 'sequelize-typescript';
+import {UserRoles} from "../roles/userRoles.model";
+import {Roles} from "../roles/roles.model";
+import {Post} from "../posts/posts.model";
 
 
 interface IUser{
@@ -8,7 +11,8 @@ interface IUser{
 
 @Table
 export class User extends Model<User,IUser> {
-    @Column({type: DataType.INTEGER, primaryKey:true, unique:true,  allowNull:false})
+    [x: string]: any;
+    @Column({type: DataType.INTEGER,  unique:true, autoIncrement:true,primaryKey:true})
     id: number;
 
     @Column({type: DataType.STRING,unique:true, allowNull:false})
@@ -22,7 +26,10 @@ export class User extends Model<User,IUser> {
 
     @Column({type: DataType.STRING, allowNull:true })
     banReason: string;
-    //
-    // @BelongsToMany(()=>Roles, ()=>UserRoles)
-    // roles:Roles[];
+
+    @BelongsToMany(()=>Roles, ()=>UserRoles)
+    roles:Roles[];
+
+    @HasMany(()=>Post)
+    posts:Post[]
 }
